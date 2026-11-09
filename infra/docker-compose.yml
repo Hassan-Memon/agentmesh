@@ -1,0 +1,142 @@
+# AgentMesh local stack. Everything runs with no API keys (DEMO_MODE=1 uses a stub LLM).
+#   docker compose -f infra/docker-compose.yml up --build
+# Optional profiles:
+#   --profile kafka      Redpanda (Kafka API) instead of / alongside RabbitMQ
+#   --profile nosql      MongoDB for the run event log
+#   --profile local-llm  Ollama for a real local model (set DEMO_MODE=0, LLM_PROVIDER=ollama)
+name: agentmesh
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: agentmesh
+      POSTGRES_PASSWORD: agentmesh
+      POSTGRES_DB: agentmesh
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentmesh -d agentmesh"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: agentmesh
+      RABBITMQ_DEFAULT_PASS: agentmesh
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # management UI (agentmesh / agentmesh)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  redpanda:
+    profiles: ["kafka"]
+    image: redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=512M
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092,OUTSIDE://0.0.0.0:19092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092,OUTSIDE://localhost:19092
+    ports:
+      - "19092:19092"
+
+  mongo:
+    profiles: ["nosql"]
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  ollama:
+    profiles: ["local-llm"]
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+
+  agent-runtime:
+    build:
+      context: ..
+      dockerfile: services/agent-runtime/Dockerfile
+    environment:
+      DEMO_MODE: ${DEMO_MODE:-1}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2}
+      OLLAMA_BASE_URL: http://ollama:11434/v1
+      OPENINFER_BASE_URL: ${OPENINFER_BASE_URL:-}
+      OPENINFER_API_KEY: ${OPENINFER_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-stub}
+      DATABASE_URL: postgresql://agentmesh:agentmesh@postgres:5432/agentmesh
+      BUS_URL: amqp://agentmesh:agentmesh@rabbitmq:5672/
+      AGENT_RUNTIME_GRPC_PORT: "50051"
+    ports:
+      - "50051:50051"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: apps/gateway/Dockerfile
+    environment:
+      PORT: "4000"
+      DATABASE_URL: postgresql://agentmesh:agentmesh@postgres:5432/agentmesh
+      RABBITMQ_URL: amqp://agentmesh:agentmesh@rabbitmq:5672/
+      MONGO_URL: ${MONGO_URL:-}
+      AGENT_RUNTIME_GRPC_URL: agent-runtime:50051
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      agent-runtime:
+        condition: service_started
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: apps/dashboard/Dockerfile
+      args:
+        NEXT_PUBLIC_GATEWAY_URL: http://localhost:4000
+    environment:
+      NEXT_PUBLIC_GATEWAY_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+
+volumes:
+  pgdata:
+  mongodata:
+  ollama:
