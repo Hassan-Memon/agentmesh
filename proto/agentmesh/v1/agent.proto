@@ -1,0 +1,155 @@
+// AgentMesh gRPC contract between the TypeScript gateway and the Python agent runtime.
+//
+// Design notes (see docs/adr/0001-grpc-between-gateway-and-agents.md):
+//   * StartRun and ResumeRun are server-streaming RPCs: the client sends one request and
+//     receives a stream of RunEvent messages until the run finishes or pauses on an interrupt.
+//   * Payloads that vary per agent (inputs, outputs, interrupt prompts) are carried as JSON
+//     strings. This keeps the schema stable while agents evolve; typed fields are reserved for
+//     things every consumer needs (ids, status, timestamps, token usage).
+//   * The Node side loads this file at runtime with @grpc/proto-loader (no codegen); the Python
+//     side generates stubs with grpcio-tools via `uv run python -m scripts.gen_proto`.
+syntax = "proto3";
+
+package agentmesh.v1;
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
+service AgentService {
+  // Returns every agent registered in the runtime's registry.
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+
+  // Starts a new run of the named agent and streams RunEvents until the graph
+  // completes, fails, or pauses on a human-in-the-loop interrupt.
+  rpc StartRun(StartRunRequest) returns (stream RunEvent);
+
+  // Resumes a run that paused on an interrupt. The runtime loads the LangGraph
+  // checkpoint for run_id and continues with the human decision, streaming RunEvents.
+  rpc ResumeRun(ResumeRunRequest) returns (stream RunEvent);
+
+  // Returns the runtime's current view of a run (status, output, pending interrupt).
+  rpc GetRun(GetRunRequest) returns (GetRunResponse);
+}
+
+// ---------------------------------------------------------------------------
+// Agents
+// ---------------------------------------------------------------------------
+
+message ListAgentsRequest {}
+
+message ListAgentsResponse {
+  repeated AgentInfo agents = 1;
+}
+
+message AgentInfo {
+  // Stable identifier used in StartRunRequest.agent, for example "researcher".
+  string name = 1;
+  // One or two sentences for the dashboard.
+  string description = 2;
+  // Semantic version of the graph definition.
+  string version = 3;
+  // Free-form tags such as "rag", "hitl", "writing".
+  repeated string capabilities = 4;
+  // True when the graph contains an interrupt() that waits for human approval.
+  bool requires_approval = 5;
+}
+
+// ---------------------------------------------------------------------------
+// Runs
+// ---------------------------------------------------------------------------
+
+message StartRunRequest {
+  // Client-generated id (UUID). Doubles as the LangGraph thread_id so a run can
+  // be resumed from its checkpoint later.
+  string run_id = 1;
+  // Which registered agent to execute.
+  string agent = 2;
+  // The user's task, in plain text.
+  string input = 3;
+  // Optional key/value metadata (tenant, user id, trace id) echoed back on events.
+  map<string, string> metadata = 4;
+}
+
+message ResumeRunRequest {
+  string run_id = 1;
+  // Human decision for the pending interrupt.
+  bool approved = 2;
+  // Optional free-text feedback the graph can use when approved == false.
+  string feedback = 3;
+  // Optional JSON blob for structured resume values (edited drafts, selections).
+  string resume_payload_json = 4;
+}
+
+message GetRunRequest {
+  string run_id = 1;
+}
+
+enum RunStatus {
+  RUN_STATUS_UNSPECIFIED = 0;
+  RUN_STATUS_QUEUED = 1;
+  RUN_STATUS_RUNNING = 2;
+  RUN_STATUS_WAITING_APPROVAL = 3;
+  RUN_STATUS_COMPLETED = 4;
+  RUN_STATUS_FAILED = 5;
+  RUN_STATUS_REJECTED = 6;
+}
+
+message GetRunResponse {
+  string run_id = 1;
+  string agent = 2;
+  RunStatus status = 3;
+  // Final output as JSON (agent specific). Empty until COMPLETED.
+  string output_json = 4;
+  // The pending interrupt payload as JSON when status == WAITING_APPROVAL.
+  string interrupt_json = 5;
+  // Cumulative token usage for the run so far.
+  TokenUsage usage = 6;
+  // Last error message when status == FAILED.
+  string error = 7;
+}
+
+// ---------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------
+
+enum RunEventType {
+  RUN_EVENT_TYPE_UNSPECIFIED = 0;
+  RUN_STARTED = 1;
+  NODE_STARTED = 2;
+  NODE_FINISHED = 3;
+  TOKEN_USAGE = 4;
+  INTERRUPT = 5;
+  RESUMED = 6;
+  DONE = 7;
+  FAILED = 8;
+  // Free-form log line from a node (debugging, progress text).
+  LOG = 9;
+}
+
+// Token usage reported by the model provider, aggregated per node or per run.
+message TokenUsage {
+  int32 prompt_tokens = 1;
+  int32 completion_tokens = 2;
+  int32 total_tokens = 3;
+}
+
+// One observable thing that happened during a run. The same message is published
+// to the event bus (JSON encoded) and streamed over gRPC, so dashboards can use either.
+message RunEvent {
+  string run_id = 1;
+  string agent = 2;
+  RunEventType type = 3;
+  // Graph node that produced the event (empty for run-level events).
+  string node = 4;
+  // Monotonic per-run sequence number so consumers can order and deduplicate.
+  int64 seq = 5;
+  // RFC 3339 timestamp in UTC.
+  string timestamp = 6;
+  // Event specific details as JSON (node output summary, interrupt prompt, final output).
+  string payload_json = 7;
+  // Present on TOKEN_USAGE and DONE events.
+  TokenUsage usage = 8;
+  // Echo of StartRunRequest.metadata.
+  map<string, string> metadata = 9;
+}
