@@ -1,0 +1,62 @@
+// Prisma schema for the gateway's own data: run records and (by default) the event log.
+// See docs/learn/03-concepts/prisma.md.
+//
+//   npx prisma generate          -> typed client in node_modules/@prisma/client
+//   npx prisma migrate deploy    -> apply prisma/migrations to DATABASE_URL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  WAITING_APPROVAL
+  COMPLETED
+  FAILED
+  REJECTED
+}
+
+/// One agent run. `id` is also the LangGraph thread_id on the runtime side.
+model Run {
+  id        String    @id
+  agent     String
+  input     String
+  status    RunStatus @default(QUEUED)
+  metadata  Json?
+  /// Final agent output (agent specific JSON) once COMPLETED/REJECTED.
+  output    Json?
+  /// Pending interrupt payload while WAITING_APPROVAL.
+  interrupt Json?
+  usage     Json?
+  error     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  events    RunEvent[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Event log fallback when MONGO_URL is not set. JSONB payload keeps the schema stable
+/// while agents evolve. (runId, seq) is unique so at-least-once delivery from the bus
+/// never produces duplicate rows: inserts are upserts.
+model RunEvent {
+  id        BigInt   @id @default(autoincrement())
+  runId     String
+  run       Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  seq       Int
+  type      String
+  node      String?
+  timestamp DateTime
+  payload   Json
+  usage     Json?
+
+  @@unique([runId, seq])
+  @@index([runId])
+}
