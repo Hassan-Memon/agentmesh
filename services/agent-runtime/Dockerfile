@@ -13,11 +13,11 @@ COPY packages/bus/pyproject.toml packages/bus/README.md packages/bus/
 COPY packages/bus/agentmesh_bus packages/bus/agentmesh_bus
 COPY services/agent-runtime/pyproject.toml services/agent-runtime/uv.lock services/agent-runtime/README.md services/agent-runtime/
 WORKDIR /src/services/agent-runtime
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-editable --no-install-project
 
 # Now the source. Installing the project itself is cheap.
 COPY services/agent-runtime/agentmesh_runtime agentmesh_runtime
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-editable
 
 # ---- stage 2: slim runtime image without uv or build tools ----------------------------
 FROM python:3.13-slim-bookworm AS runtime
@@ -25,7 +25,6 @@ ENV PYTHONUNBUFFERED=1 PATH="/opt/venv/bin:$PATH"
 RUN useradd --create-home --uid 10001 app
 WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /src/packages/bus /src/packages/bus
 COPY --from=builder /src/services/agent-runtime/agentmesh_runtime /app/agentmesh_runtime
 USER app
 EXPOSE 50051
