@@ -1,12 +1,14 @@
 import Link from 'next/link';
+import { DemoRunsTable } from '@/components/demo-pages';
 import { Notice } from '@/components/notice';
 import { RunsTable } from '@/components/runs-table';
-import { api, tryFetch } from '@/lib/api';
+import { api, DEMO_MODE, tryFetch } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
 export default async function RunsPage() {
-  const { data: runs, error } = await tryFetch(() => api.runs());
+  // Demo mode: runs live in the visitor's sessionStorage, so the table loads in the browser.
+  const { data: runs, error } = DEMO_MODE ? { data: null, error: null } : await tryFetch(() => api.runs());
 
   return (
     <div className="space-y-6">
@@ -19,7 +21,15 @@ export default async function RunsPage() {
           New run
         </Link>
       </div>
-      {error ? <Notice title="Could not load runs" tone="danger">{error}</Notice> : <RunsTable initialRuns={runs ?? []} />}
+      {DEMO_MODE ? (
+        <DemoRunsTable />
+      ) : error ? (
+        <Notice title="Could not load runs" tone="danger">
+          {error}
+        </Notice>
+      ) : (
+        <RunsTable initialRuns={runs ?? []} />
+      )}
     </div>
   );
 }
