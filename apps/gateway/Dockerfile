@@ -31,5 +31,5 @@ COPY apps/gateway/prisma ./prisma
 COPY proto ./proto
 USER node
 EXPOSE 4000
-# Apply migrations, then start. `prisma` CLI is a dev dependency, so use the client's bundled runtime via npx with no install.
-CMD ["sh", "-c", "npx --no-install prisma migrate deploy || echo 'migrate skipped'; node dist/main.js"]
+# Apply pending migrations, then start. `prisma` is a production dependency for exactly this step.
+CMD ["sh", "-c", "npx --no-install prisma migrate deploy && node dist/main.js"]
