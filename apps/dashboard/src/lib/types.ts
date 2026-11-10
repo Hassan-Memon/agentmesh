@@ -50,4 +50,6 @@ export interface RunEvent {
   timestamp: string;
   payload: Record<string, unknown>;
   usage: TokenUsage | null;
+  /** Echo of the run's metadata (the gateway always sends it; older events may omit it). */
+  metadata?: Record<string, string>;
 }
