@@ -22,8 +22,10 @@ jobs:
           enable-cache: true
       - run: uv python install 3.13
       - run: uv sync --frozen
-      - run: uv run ruff check .
+      - run: uv run ruff check . ../../packages/bus
       - run: uv run pytest -q
+      - name: bus package tests
+        run: uv run pytest -q ../../packages/bus/tests
 
   gateway:
     name: gateway (nest)

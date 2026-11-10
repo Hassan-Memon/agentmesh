@@ -43,15 +43,11 @@ class KafkaBus(EventBus):
         if self._producer is None:
             raise RuntimeError("KafkaBus.publish called before connect()")
         kafka_headers = [(k, v.encode("utf-8")) for k, v in (headers or {}).items()]
-        await self._producer.send_and_wait(
-            self._topic, value=payload, key=routing_key, headers=kafka_headers
-        )
+        await self._producer.send_and_wait(self._topic, value=payload, key=routing_key, headers=kafka_headers)
 
     def subscribe(self, pattern: str, *, queue_name: str | None = None) -> Subscription:
         sub = Subscription(pattern, on_close=self._cancel)
-        self._tasks[id(sub)] = asyncio.get_running_loop().create_task(
-            self._consume(sub, pattern, queue_name)
-        )
+        self._tasks[id(sub)] = asyncio.get_running_loop().create_task(self._consume(sub, pattern, queue_name))
         return sub
 
     async def _consume(self, sub: Subscription, pattern: str, group_id: str | None) -> None:

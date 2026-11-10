@@ -13,7 +13,7 @@ import json
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 EXCHANGE_NAME = "agentmesh.events"
 KAFKA_TOPIC = "agentmesh.events"
@@ -28,9 +28,7 @@ class Envelope:
     headers: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_bytes(
-        cls, routing_key: str, body: bytes, headers: dict[str, Any] | None = None
-    ) -> Envelope:
+    def from_bytes(cls, routing_key: str, body: bytes, headers: dict[str, Any] | None = None) -> Envelope:
         return cls(
             routing_key=routing_key,
             payload=json.loads(body.decode("utf-8")),
@@ -61,7 +59,7 @@ class Subscription:
             raise StopAsyncIteration
         return env
 
-    def __aiter__(self) -> Subscription:
+    def __aiter__(self) -> Self:
         return self
 
     async def __anext__(self) -> Envelope:
@@ -77,7 +75,7 @@ class Subscription:
         self._queue.put_nowait(None)
         await self._on_close(self)
 
-    async def __aenter__(self) -> Subscription:
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *exc: object) -> None:
