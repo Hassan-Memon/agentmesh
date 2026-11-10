@@ -114,7 +114,7 @@ npm run cf:deploy             # build and deploy the "agentmesh" worker to worke
 - Config lives in `apps/dashboard/wrangler.jsonc` (worker name `agentmesh`, `nodejs_compat`,
   static assets binding, `workers_dev: true`) and `apps/dashboard/open-next.config.ts`.
 - No R2, KV or D1 bindings are used, so the Workers free plan is enough. The compressed worker
-  is about 0.9 MiB, well under the free plan's 3 MiB limit. Check it any time with
+  is about 1 MiB (990 KiB gzip), well under the free plan's 3 MiB limit. Check it any time with
   `npx wrangler deploy --dry-run --outdir .wrangler/dry-run` after `cf:build`.
 - The demo flag is a build-time value: the Docker image and `npm run build` never set it, so
   they keep talking to the real gateway.
