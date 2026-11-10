@@ -10,6 +10,11 @@ or free tiers.
 ![python](https://img.shields.io/badge/python-3.12%2B-3776AB)
 ![node](https://img.shields.io/badge/node-22-339933)
 
+> **Live demo: [agentmesh.hassan-memon.workers.dev](https://agentmesh.hassan-memon.workers.dev).**
+> The dashboard runs with a simulated backend inside your browser. Start a run, watch every step
+> stream in, then approve or reject the reviewer agent. To run the real services, follow the
+> [Quickstart](#quickstart-no-api-keys-needed).
+
 ## Why
 
 Hosted agent platforms are convenient until you need to run a different model, keep data in
@@ -203,6 +208,19 @@ Next, gRPC and message brokers for the first time:
 
 Architecture decisions are in [`docs/adr/`](docs/adr/). Who this is for and why it wins is in
 [`docs/positioning.md`](docs/positioning.md).
+
+## Status
+
+MVP, version 0.1.0. See [CHANGELOG.md](CHANGELOG.md) for the full history.
+
+Verified: 24 agent-runtime tests, 9 event-bus tests and 11 gateway tests pass offline. The gateway
+and dashboard build and lint cleanly, and all three Docker images build. The gateway talks to the
+Python runtime over real gRPC, and a human approval pause and resume works end to end over gRPC.
+The public demo was checked in a browser at desktop and phone widths.
+
+Not yet verified: the full `docker compose up` stack against a real Postgres and RabbitMQ, the
+Kafka adapter against a broker, and calls to a real LLM provider. Authentication and multi-tenancy
+are not built yet.
 
 ## License
 
