@@ -5,7 +5,8 @@
 
 # ---- stage 1: resolve and install dependencies with uv -------------------------------
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=/opt/venv
+# Generous download timeout: large wheels (grpcio, langchain) time out on slow links at the 30s default.
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=/opt/venv UV_HTTP_TIMEOUT=300
 WORKDIR /src
 
 # Copy only dependency metadata first so this layer is cached until deps change.
