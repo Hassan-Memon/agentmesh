@@ -38,7 +38,7 @@ Close with what breaks first at 10x (lesson 02).
 
 - 3 agents, 4 RPCs, 10 event types, 6 run statuses.
 - 24 offline runtime tests in under 10 s; 11 gateway Jest tests with mocked gRPC and Prisma.
-- A simple run emits 7 events; a reviewer run emits 9 across interrupt and resume.
+- A researcher run emits 7 events; a reviewer run emits 12 (6 before the pause, 6 after).
 - Context budget 6000 tokens by default, tiktoken with a chars/4 fallback.
 - At-least-once delivery, deduplicated by per-run `seq`; event log upserts on `(runId, seq)`.
 - Free deploy: Vercel, two Render services, Neon, CloudAMQP. Cost zero, 30 to 60 s cold start.
