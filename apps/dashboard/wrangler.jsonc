@@ -1,0 +1,24 @@
+// Cloudflare Workers config for the public dashboard demo (free plan, no backend).
+// Build with `npm run cf:build` (sets NEXT_PUBLIC_DEMO_MODE=1), then `npm run cf:preview`
+// or `npm run cf:deploy`. See docs/deploy.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agentmesh",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  // NEXT_PUBLIC_* values are inlined at build time by `cf:build`; this keeps the runtime
+  // environment consistent with the bundle for anything that reads process.env on the server.
+  "vars": {
+    "NEXT_PUBLIC_DEMO_MODE": "1"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

@@ -8,7 +8,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "cf:build": "cross-env NEXT_PUBLIC_DEMO_MODE=1 opennextjs-cloudflare build",
+    "cf:preview": "cross-env NEXT_PUBLIC_DEMO_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "cross-env NEXT_PUBLIC_DEMO_MODE=1 opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "next": "^15.1.0",
@@ -18,13 +21,16 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
+    "@opennextjs/cloudflare": "^1.20.16",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "cross-env": "^7.0.3",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.1.0",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "wrangler": "^4.159.0"
   }
 }
