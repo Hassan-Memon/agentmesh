@@ -57,8 +57,8 @@ export function LiveRun({ initialRun, initialEvents }: { initialRun: Run; initia
   const isTerminal = run.status === 'COMPLETED' || run.status === 'FAILED' || run.status === 'REJECTED';
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="min-w-0 space-y-6">
         {run.status === 'WAITING_APPROVAL' && run.interrupt ? (
           <ApprovalCard runId={run.id} interrupt={run.interrupt} onDecided={refresh} />
         ) : null}

@@ -44,7 +44,7 @@ export function Timeline({ events, live }: { events: RunEvent[]; live?: boolean 
   return (
     <ol className="relative ml-2 border-l border-line">
       {events.map((ev) => (
-        <li key={ev.seq} className="relative mb-4 pl-5">
+        <li key={ev.seq} className="relative mb-4 min-w-0 pl-5">
           <span className={`absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full ${tone[ev.type] ?? 'bg-muted'}`} aria-hidden />
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="text-sm font-medium">{describe(ev)}</span>
