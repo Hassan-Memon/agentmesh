@@ -54,14 +54,29 @@ async def test_writer_produces_outline_then_draft(runtime: Runtime) -> None:
 
 async def test_reviewer_interrupts_then_resumes_on_approval(runtime: Runtime) -> None:
     first = await collect(runtime.engine.start_run("rv1", "reviewer", "Please review this paragraph."))
-    assert first[-1]["type"] == "INTERRUPT"
+    # The interrupt is control flow, not a failure: no LOG/node_failed event may precede it.
+    assert types(first) == [
+        "RUN_STARTED",
+        "NODE_STARTED",
+        "NODE_FINISHED",
+        "TOKEN_USAGE",
+        "NODE_STARTED",
+        "INTERRUPT",
+    ]
     assert first[-1]["payload"]["review"]["verdict"] == "approve"
     record = runtime.engine.store.require("rv1")
     assert record.status == "WAITING_APPROVAL"
     assert record.interrupt is not None and "question" in record.interrupt
 
     second = await collect(runtime.engine.resume_run("rv1", approved=True, feedback="ship it"))
-    assert second[0]["type"] == "RESUMED"
+    assert types(second) == [
+        "RESUMED",
+        "NODE_STARTED",
+        "NODE_FINISHED",
+        "NODE_STARTED",
+        "NODE_FINISHED",
+        "DONE",
+    ]
     assert second[-1]["type"] == "DONE"
     assert second[-1]["payload"]["output"]["status"] == "approved"
     assert second[-1]["payload"]["output"]["feedback"] == "ship it"

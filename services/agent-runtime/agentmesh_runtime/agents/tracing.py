@@ -14,6 +14,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from langgraph.config import get_stream_writer
+from langgraph.errors import GraphBubbleUp
 
 from .state import AgentState
 
@@ -29,6 +30,10 @@ def traced(node_name: str) -> Callable[[NodeFn], NodeFn]:
             started = time.perf_counter()
             try:
                 result = await fn(state)
+            except GraphBubbleUp:
+                # interrupt() and Command(goto=...) are control flow, not failures: LangGraph
+                # raises them to pause or redirect the graph. Let them through silently.
+                raise
             except Exception as exc:
                 writer({"type": "node_failed", "node": node_name, "error": str(exc)})
                 raise
