@@ -92,6 +92,33 @@ network. Keeping them together is simpler and is the recommended layout.
 The dashboard talks to the gateway directly from the browser (REST and Socket.IO), so the
 gateway must allow the Vercel origin.
 
+### 5b. Dashboard demo: Deploy to Cloudflare Workers (free)
+
+A standalone public demo of the dashboard with no backend at all. Live at
+https://agentmesh.hassan-memon.workers.dev.
+
+With `NEXT_PUBLIC_DEMO_MODE=1` the dashboard swaps the gateway for an in-browser simulation
+(`apps/dashboard/src/lib/demo/`) that speaks the same REST and Socket.IO contract: the three
+agents, a few seeded runs, live RunEvents on timers, the reviewer's interrupt and the approval
+card. Runs are kept in the visitor's `sessionStorage`. Every page shows a banner saying the
+backend is simulated, so nobody mistakes it for a real deployment.
+
+```bash
+cd apps/dashboard
+npx wrangler login            # once
+npm run cf:build              # next build + OpenNext bundle, with NEXT_PUBLIC_DEMO_MODE=1
+npm run cf:preview            # optional: build and serve locally with wrangler dev
+npm run cf:deploy             # build and deploy the "agentmesh" worker to workers.dev
+```
+
+- Config lives in `apps/dashboard/wrangler.jsonc` (worker name `agentmesh`, `nodejs_compat`,
+  static assets binding, `workers_dev: true`) and `apps/dashboard/open-next.config.ts`.
+- No R2, KV or D1 bindings are used, so the Workers free plan is enough. The compressed worker
+  is about 0.9 MiB, well under the free plan's 3 MiB limit. Check it any time with
+  `npx wrangler deploy --dry-run --outdir .wrangler/dry-run` after `cf:build`.
+- The demo flag is a build-time value: the Docker image and `npm run build` never set it, so
+  they keep talking to the real gateway.
+
 ## 6. Optional: MongoDB Atlas M0 for the event log
 
 Create a free M0 cluster, allow access from anywhere (Render IPs are not fixed on the free

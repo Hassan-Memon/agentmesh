@@ -182,6 +182,7 @@ Everything below is a free tier. Full steps in [`docs/deploy.md`](docs/deploy.md
 | Component | Where | Notes |
 | --- | --- | --- |
 | Dashboard | Vercel (Hobby) | `apps/dashboard` as root, set `NEXT_PUBLIC_GATEWAY_URL` |
+| Dashboard demo (no backend) | Cloudflare Workers (free) | `npm run cf:deploy` in `apps/dashboard`; simulated backend in the browser, live at https://agentmesh.hassan-memon.workers.dev |
 | Gateway | Render free web service | Dockerfile `apps/gateway/Dockerfile`, context repo root |
 | Agent runtime | Render free web service | Dockerfile `services/agent-runtime/Dockerfile`; gRPC over HTTP/2 |
 | Postgres + pgvector | Neon free | `DATABASE_URL` for both gateway and runtime |
