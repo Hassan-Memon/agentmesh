@@ -206,3 +206,7 @@ Architecture decisions are in [`docs/adr/`](docs/adr/). Who this is for and why 
 ## License
 
 Apache-2.0. Copyright 2026 Hassan Memon.
+
+## Curriculum
+
+A cross-product course on architecture, system design, market worth, marketing, selling and job hunting lives in [docs/curriculum](docs/curriculum/00-README.md).
